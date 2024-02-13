@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ FreeBasic Language Definition  <https://www.freebasic.net>
+   for GtkSourceView            <https://wiki.gnome.org/Projects/GtkSourceView>
+   Created: Feb-2024
+
+ Author: Alex Thomson
+ Copyright (C) 2024 Alex Thomson
+
+ This file is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+
+ This file is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with this library; if not, see <http://www.gnu.org/licenses/>.
+
+-->
+
+<language id="freebasic" name="FreeBasic" version="2.0" _section="Source">
+  <metadata>
+    <property name="mimetypes">text/x-fb;text/x-freebasic</property>
+    <property name="globs">*.bas;*.bi</property>
+    <property name="line-comment-start">'</property>
+    <property name="block-comment-start">/'</property>
+    <property name="block-comment-end">'/</property>
+  </metadata>
+
+  <styles>
+    <style id="comment"           name="Comment"            map-to="def:comment"/>
+    <style id="string"            name="String"             map-to="def:string"/>
+    <style id="escaped-character" name="Escaped Character"  map-to="def:special-char"/>
+    <style id="preprocessor"      name="Preprocessor"       map-to="def:preprocessor"/>
+    <style id="included-file"     name="Included File"      map-to="def:string"/>
+    <style id="common-defines"    name="Common Defines"     map-to="def:special-constant"/>
+    <style id="floating-point"    name="Floating Point"     map-to="def:floating-point"/>
+    <style id="hexadecimal"       name="Hexadecimal number" map-to="def:number"/>
+    <style id="decimal"           name="Decimal"            map-to="def:decimal"/>
+    <style id="octal"             name="Octal number"       map-to="def:number"/>
+    <style id="binary"            name="Binary number"      map-to="def:number"/>
+    <style id="boolean"           name="Boolean value"      map-to="def:boolean"/>
+    <style id="type"              name="Data Type"          map-to="def:type"/>
+    <style id="keyword"           name="Keyword"            map-to="def:keyword"/>
+    <style id="intrinsic"         name="Builtin function"   map-to="def:builtin"/>
+    <style id="identifier"        name="Identifier"         map-to="def:identifier"/>
+  </styles>
+
+  <default-regex-options case-sensitive="false"/>
+
+  <definitions>
+
+    <!-- Reusable Regular Expressions -->
+    <define-regex id="integer-prefix">(const\s+)?(u|(unsigned\s\s*))?</define-regex>
+    <define-regex id="integer-lit-suffix">(ull|ul|ll|u|l|&amp;|%)?</define-regex>
+    <define-regex id="float-exponent">([de]([-+]?[0-9]+)?)</define-regex>
+
+    <!-- https://www.freebasic.net/wiki/TblEscapeSequences -->
+    <define-regex id="escaped-character" extended="true">
+      \\(                    # leading backslash
+      [\\\"\'abflnrtv] |     # escaped character
+      u.{4} |                # unicode char in 4 hex digits (also gets non hex chars (fbc bug?))
+      [0-9]{1,3} |           # ascii char in decimal
+      &amp;h[0-9a-f]{1,2} |  # ascii char in hex
+      &amp;o[0-7]{1,3} |     # ascii char in octal
+      &amp;b[0-1]{1,8} )     # ascii char in binary
+    </define-regex>
+
+    <context id="freebasic" class="no-spell-check">
+      <include>
+
+        <context id="comment-multiline" style-ref="comment">
+          <start>\/'</start>
+          <end>'\/</end>
+          <include>
+            <context id="comment-in-comment">
+              <start>\/'</start>
+              <end>'\/</end>
+              <include>
+                <context ref="comment-in-comment"/>
+                <context ref="def:in-comment"/>
+              </include>
+            </context>
+            <context ref="def:in-comment"/>
+          </include>
+        </context>
+
+        <context id="metacommands" style-ref="comment" extend-parent="false">
+          <match>('|rem\s)\s*(\$include(\s+once)?:|\$lang:|\$dynamic|\$static).*</match>
+          <include>
+            <context id="metacommand" sub-pattern="2" style-ref="keyword"/>
+          </include>
+        </context>
+
+        <context id="comment" style-ref="comment">
+          <start>'|rem\s</start>
+          <end>$</end>
+          <include>
+            <context ref="def:in-comment"/>
+          </include>
+        </context>
+
+        <context id="include" style-ref="preprocessor">
+          <match>^\s*#(inclib|include|include\s+once|libpath)\s+(".*"|&lt;.*&gt;)</match>
+          <include>
+            <context id="included-file" sub-pattern="2" style-ref="included-file" class="path"/>
+          </include>
+        </context>
+
+        <context id="preprocessor" style-ref="preprocessor">
+          <prefix>^\s*</prefix>
+
+          <keyword>#assert</keyword>
+          <keyword>#cmdline</keyword>
+          <keyword>#define</keyword>
+          <keyword>#else(if(n?def)?)?</keyword> <!-- #ElseIfNDef https://www.freebasic.net/wiki/KeyPgPpelseifndef -->
+          <keyword>#end(if|macro)</keyword>
+          <keyword>#error</keyword>
+          <keyword>#if(n?def)?</keyword>
+          <keyword>#lang</keyword>
+          <keyword>#line</keyword>
+          <keyword>#macro</keyword>
+          <keyword>#pragma(\s+(once|reserve|private|msbitfields|push|pop))?</keyword>
+          <keyword>#print</keyword>
+          <keyword>#undef</keyword>
+        </context>
+        <context id="defined" style-ref="preprocessor">
+          <keyword>defined</keyword>
+        </context>
+
+        <context id="escaped-string" end-at-line-end="true" style-ref="string">
+          <start>!"</start>
+          <end>"</end>
+          <include>
+            <context id="escaped-character" style-ref="escaped-character">
+              <match>\%{escaped-character}</match>
+            </context>
+          </include>
+        </context>
+
+        <context id="string" end-at-line-end="true" style-ref="string">
+          <start>[\$]?"</start>
+          <end>"</end>
+        </context>
+        
+        <!-- https://www.freebasic.net/wiki/CatPgDddefines -->
+        <context id="common-defines" style-ref="common-defines">
+          <keyword>NULL</keyword> <!-- is NULL really an FB define?  Maybe not, but it will likely be used when pointers are used -->
+          
+          <keyword>__FB_WIN32__|__FB_LINUX__|__FB_DOS__|__FB_CYGWIN__|__FB_FREEBSD__|__FB_NETBSD__</keyword>
+          <keyword>__FB_OPENBSD__|__FB_DARWIN__|__FB_XBOX__|__FB_BIGENDIAN__|__FB_PCOS__|__FB_UNIX__</keyword>
+          <keyword>__FB_64BIT__|__FB_ARM__|__FB_PPC__|__FB_X86__|__FB_JS__|__FB_ANDROID__</keyword>
+          
+          <keyword>__FB_VERSION__|__FB_VER_MAJOR__|__FB_VER_MINOR__|__FB_VER_PATCH__|__FB_MIN_VERSION__</keyword>
+          <keyword>__FB_BUILD_DATE__|__FB_BUILD_DATE_ISO__|__FB_SIGNATURE__|__FB_BUILD_SHA1__</keyword>
+
+          <keyword>__FB_ASM__|__FB_BACKEND__|__FB_GCC__|__FB_OPTIMIZE__|__FB_GUI__|__FB_MAIN__</keyword>
+          <keyword>__FB_DEBUG__|__FB_ERR__|__FB_FPMODE__|__FB_FPU__|__FB_LANG__|__FB_MT__|__FB_OUT_DLL__</keyword>
+          <keyword>__FB_OUT_EXE__|__FB_OUT_LIB__|__FB_OUT_OBJ__|__FB_SSE__|__FB_VECTORIZE__</keyword>
+
+          <keyword>__FB_ARGC__|__FB_ARGV__|__DATE__|__DATE_ISO__|__TIME__|__PATH__</keyword>
+
+          <keyword>__FILE__|__FILE_NQ__|__FUNCTION__|__FUNCTION_NQ__|__LINE__|__FB_OPTION_BYVAL__|__FB_OPTION_DYNAMIC__</keyword>
+          <keyword>__FB_OPTION_ESCAPE__|__FB_OPTION_GOSUB__|__FB_OPTION_EXPLICIT__|__FB_OPTION_PRIVATE__</keyword>
+
+          <keyword>__FB_ARG_COUNT__|__FB_ARG_EXTRACT__|__FB_ARG_LEFTOF__|__FB_ARG_RIGHTOF__|__FB_EVAL__|__FB_IIF__|__FB_JOIN__</keyword>
+          <keyword>__FB_QUERY_SYMBOL__|__FB_QUOTE__|__FB_UNIQUEID__|__FB_UNIQUEID_POP__|__FB_UNIQUEID_PUSH__|__FB_UNQUOTE__</keyword>
+
+          <!--
+            Event types for Event UDT from ScreenEvent https://www.freebasic.net/wiki/KeyPgEvent
+            <keyword>EVENT_(KEY_(PRESS|RELEASE|REPEAT)|MOUSE_(MOVE|BUTTON_(PRESS|RELEASE)|DOUBLE_CLICK|(H)?WHEEL|ENTER|EXIT)|WINDOW_((GOT|LOST)_FOCUS|CLOSE))</keyword>
+          -->
+        </context>
+
+        <!-- https://www.freebasic.net/wiki/KeyPgInteger -->
+
+        <context id="integer-types" style-ref="type">
+          <match>\%{integer-prefix}integer((&lt;(8|16|32|64)&gt;)?)</match>
+        </context>
+        <context id="function-pointers" style-ref="type">
+          <match>(as)\s+(const\s+)?(function|sub)</match>
+          <include>
+            <context id="as-keyword" sub-pattern="1" style-ref="keyword"/>
+          </include>
+        </context>
+        <context id="types" style-ref="type">
+          <keyword>\%{integer-prefix}byte</keyword>
+          <keyword>\%{integer-prefix}short</keyword>
+          <keyword>\%{integer-prefix}long</keyword>
+          <keyword>\%{integer-prefix}longint</keyword>
+
+          <keyword>(const\s+)?boolean</keyword>
+
+          <keyword>(const\s+)?single</keyword>
+          <keyword>(const\s+)?double</keyword>
+
+          <keyword>(const\s+)?(z|w)?string</keyword>
+
+          <keyword>(const\s+)?object</keyword>
+
+          <keyword>(const\s+)?(any\s)?\s*(pointer|ptr)</keyword>
+        </context>
+
+        <!-- Numeric Literals https://www.freebasic.net/wiki/ProPgLiterals -->
+        
+        <context id="float" style-ref="floating-point">
+          <!-- uses 3 patterns to avoid matching integer literals -->
+          <match extended="true">
+            ( [0-9]*(\. [0-9]+) \%{float-exponent}? [!f#]?  # [number].fraction [exponent] [suffix]
+            | [0-9]+ \%{float-exponent} [!f#]?              # number  exponent [suffix]
+            | [0-9]+ \%{float-exponent}? [!f#] )            # number [exponent] suffix
+          </match>
+        </context>
+        
+        <context id="hexadecimal" style-ref="hexadecimal">
+          <match>&amp;h[a-f0-9]+\%{integer-lit-suffix}</match>
+        </context>
+        
+        <context id="decimal" style-ref="decimal">
+          <match>(0|[1-9][0-9]*)\%{integer-lit-suffix}</match>
+        </context>
+        
+        <context id="octal" style-ref="octal">
+          <match>&amp;o[0-7]+\%{integer-lit-suffix}</match>
+        </context>
+        
+        <context id="binary" style-ref="binary">
+          <match>&amp;b[0-1]+\%{integer-lit-suffix}</match>
+        </context>
+        
+        <context id="boolean" style-ref="boolean">
+          <keyword>true</keyword>
+          <keyword>false</keyword>
+        </context>
+
+        <!-- https://www.freebasic.net/wiki/CatPgFunctIndex -->
+
+        <context id="keywords" style-ref="keyword">
+          <!-- Arrays -->
+          <keyword>arraylen|arraysize|erase|lbound|ubound|redim(\s+(preserve|shared))?</keyword>
+          
+          <!-- Compiler Switches -->
+          <keyword>def(str|sng|dbl|u?(byte|short|int|lng|longint))|option\s+(BASE|BYVAL|DYNAMIC|ESCAPE|EXPLICIT|(NO)?GOSUB|NOKEYWORD|PRIVATE|STATIC)</keyword>
+
+          <!-- Data types and declarations -->
+          <keyword>ALIAS|AS|CONST|(DIM|STATIC|COMMON|VAR)(\s+SHARED)?|EXTENDS(\s+(W|S)STRING)?|FIELD|(END\s+)?(ENUM|TYPE|SCOPE|UNION|WITH)</keyword>
+          <!-- Types Futureproofing see https://www.freebasic.net/wiki/KeyPgImplements https://www.freebasic.net/wiki/KeyPgClass -->
+          <keyword>IMPLEMENTS|(END\s+)?(CLASS|INTERFACE)</keyword>
+
+          <!-- Error handling -->
+          <keyword>ERFN|ERL|ERMN|ERR|ERROR|ON\s+(LOCAL\s+)?ERROR|RESUME(\s+NEXT)?</keyword>
+          
+          <!-- Keyword based operators -->
+          <keyword>and(also)?|eqv|imp|or(else)?|xor|not|mod|shl|shr|let|is</keyword>
+
+          <!-- Miscellaneous-->
+          <keyword>(END\s+)?ASM|DATA|READ|RESTORE|(OFFSET|SIZE|TYPE)OF|OPTION|TO|SWAP</keyword>
+
+          <!-- Modularizing -->
+          <keyword>DYLIB(FREE|LOAD|SYMBOL)|EXPORT|EXTERN\s+IMPORT|(END\s+)?(EXTERN|NAMESPACE)|USING|PRIVATE|PUBLIC</keyword>
+
+          <!-- Pointers -->
+          <keyword>PEEK|POKE|SADD|(PROC|STR|VAR)PTR</keyword>
+
+          <!-- Procedures -->
+          <keyword>ABSTRACT|VIRTUAL|ALIAS|ANY|BASE|THIS|BY(REF|VAL)|CALL|CDECL|PASCAL|(STD|__FAST|__THIS)CALL|DECLARE|RETURN</keyword>
+          <keyword>(END\s+)?(FUNCTION|SUB|CONSTRUCTOR|DESTRUCTOR|OPERATOR|PROPERTY)|LIB|NAKED|OVERLOAD|OVERRIDE|PROTECTED</keyword>
+
+          <!-- Variadic procedures -->
+          <keyword>CVA_(ARG|COPY|END|LIST|START)|VA_(ARG|FIRST|NEXT)</keyword>
+
+          <!-- Program flow -->
+          <keyword>DO|LOOP|UNTIL|WHILE|WEND|CONTINUE|EXIT|(END\s+)?(IF|SELECT)|CASE|THEN|ELSE(IF)?|ENDIF|IIF|FOR|STEP|NEXT|ON|GOSUB|GOTO</keyword>
+
+          <!-- Type casting/conversion -->
+          <keyword>CAST|C(PTR|SIGN|UNSG|BOOL|DBL|SNG|(U)?(BYTE|INT|LNG|LNGINT|SHORT))</keyword>
+        </context>
+
+        <context id="builtin-functions" style-ref="intrinsic">
+          <!-- Bit Manipulation -->
+          <keyword>bit|bitreset|bitset|hibyte|lobyte|hiword|loword</keyword>
+
+          <!-- Console -->
+          <keyword>BEEP|CLS|COLOR|CSRLIN|LOCATE|OPEN\s+(CONS|ERR|PIPE|SCRN)|POS|PRINT(\s+USING)?|SCREEN|SPC|TAB|VIEW|WIDTH|WRITE</keyword>
+
+          <!-- Date and time -->
+          <keyword>DATE(ADD|DIFF|PART|SERIAL|VALUE)?|(SET|IS)DATE|DAY|HOUR|MINUTE|MONTH(NAME)?|NOW|SECOND|TIME(SERIAL|VALUE)?|SETTIME|TIMER|YEAR|WEEKDAY(NAME)?</keyword>
+
+          <!-- Debug support -->
+          <keyword>ASSERT(WARN)?|STOP</keyword>
+
+          <!-- Hardware access -->
+          <keyword>INP|OUT|WAIT|OPEN\s+(COM|LPT)|LPOS|LPRINT</keyword>
+
+          <!-- Files -->
+          <keyword>(LINE\s+)?INPUT|WINPUT|OPEN|OUTPUT|APPEND|BINARY|RANDOM|ACCESS\s+(READ(\s+WRITE)?|WRITE)</keyword>
+          <keyword>BLOAD|BSAVE|CLOSE|ENCODING|EOF|FREEFILE|GET|PUT|LOC|LOCK|LOF|RESET|SEEK|UNLOCK|WRITE</keyword>
+
+          <!-- Graphics -->
+          <keyword>ADD|ALPHA|CUSTOM|TRANS|PSET|PRESET|CIRCLE|LINE|PAINT|DRAW(\s+STRING)?|FLIP|IMAGE(CONVERTROW|CREATE|DESTROY|INFO)|PALETTE</keyword>
+          <keyword>PCOPY|PMAP|POINT(COORD)?|RGB(A)?|SCREEN(CONTROL|COPY|EVENT|INFO|GLPROC|LIST|LOCK|PTR|RES|SET|SYNC|UNLOCK)?|VIEW|WINDOW</keyword>
+
+          <!-- Math -->
+          <keyword>ABS|ACOS|ASIN|ATAN2|ATN|COS|EXP|FIX|FRAC|INT|LOG|RANDOMIZE|RND|SGN|SIN|SQR|TAN</keyword>
+
+          <!-- Memory -->
+          <keyword>(C|DE|RE)?ALLOCATE|CLEAR|FB_MEM(COPY(CLEAR)?|MOVE)|FRE|NEW|DELETE</keyword>
+
+          <!-- Multithreading -->
+          <keyword>COND(BROADCAST|CREATE|DESTROY|SIGNAL|WAIT)|MUTEX(CREATE|DESTROY|(UN)?LOCK)|THREAD(CALL|CREATE|DETACH|SELF|WAIT)</keyword>
+
+          <!-- OS / shell -->
+          <keyword>(CH|CUR|RM|MK)?DIR|FILE(ATTR|COPY|DATETIME|EXISTS|FLUSH|SETEOF|LEN)|ISREDIRECTED|KILL|NAME</keyword>
+          <keyword>CHAIN|EXEC|RUN|SHELL|COMMAND|EXEPATH|END|SYSTEM|(SET)?ENVIRON|WINDOWTITLE</keyword>
+
+          <!-- String functions -->
+          <keyword>INSTR(REV)?|(l|U)Case|LEFT|RIGHT|MID|LEN|(L|R)SET|(L|R)?TRIM|(W)?SPACE</keyword>
+
+          <!-- String and number conversion -->
+          <keyword>ASC|FORMAT|(CV|MK)(D|I|L|LONGINT|S|SHORT)|VAL((U)?LNG|(U)?INT)?|(W)?(BIN|CHR|HEX|OCT|STR)</keyword>
+
+          <!-- User input -->
+          <keyword>(GET|IN|MULTI)KEY|SLEEP|(GET|SET)MOUSE|GETJOYSTICK|STICK|STRIG</keyword>
+        </context>
+
+        <context id="identifier" style-ref="identifier">
+          <match>(_|[a-z])(_|[a-z]|[0-9])*</match>
+        </context>
+      </include>
+    </context>
+
+  </definitions>
+</language>
