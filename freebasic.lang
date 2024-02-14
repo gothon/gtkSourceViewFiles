@@ -329,7 +329,7 @@
         </context>
 
         <context id="identifier" style-ref="identifier">
-          <match>(_|[a-z])(_|[a-z]|[0-9])*</match>
+          <match>_(_|[a-z]|[0-9])+|[a-z](_|[a-z]|[0-9])*</match>
         </context>
       </include>
     </context>
