@@ -275,7 +275,7 @@
           <keyword>CVA_(ARG|COPY|END|LIST|START)|VA_(ARG|FIRST|NEXT)</keyword>
 
           <!-- Program flow -->
-          <keyword>DO|LOOP|UNTIL|WHILE|WEND|CONTINUE|EXIT|(END\s+)?(IF|SELECT)|CASE|THEN|ELSE(IF)?|ENDIF|IIF|FOR|STEP|NEXT|ON|GOSUB|GOTO</keyword>
+          <keyword>DO|LOOP|UNTIL|WHILE|WEND|CONTINUE|EXIT|(END\s+)?(IF|SELECT|WHILE)|CASE|THEN|ELSE(IF)?|ENDIF|IIF|FOR|STEP|NEXT|ON|GOSUB|GOTO</keyword>
 
           <!-- Type casting/conversion -->
           <keyword>CAST|C(PTR|SIGN|UNSG|BOOL|DBL|SNG|(U)?(BYTE|INT|LNG|LNGINT|SHORT))</keyword>
